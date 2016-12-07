@@ -3,19 +3,19 @@
 
 #include "stdafx.h"
 #include <Windows.h>
-#define BUFSIZE 4096
+#include <string>
+#include <iostream>
 
-int _tmain(int argc, _TCHAR* argv[])
-{
-	LPTSTR lpszPipename = TEXT("\\\\.\\pipe\\Duan");  
-	LPTSTR lpvMessage=TEXT("Default message from Server"); 
+#define BUFSIZE 4096
+DWORD WINAPI InstanceThread(LPVOID);
+int _tmain(int argc, _TCHAR* argv[]) {
+	LPTSTR lpszPipename = TEXT("\\\\.\\pipe\\Duan"); 
 	BOOL IsConnected, IsSuccess;
-	HANDLE hPipe;
-	TCHAR chRequest[BUFSIZE];   
-    TCHAR chReply[BUFSIZE];
-	DWORD cbBytesRead;
-	DWORD cbWritten;
+	HANDLE hPipe, hThread;
+	DWORD dwThreadId;   
+
 	while (true) {
+
 		hPipe = CreateNamedPipe(
 		lpszPipename,
 		PIPE_ACCESS_DUPLEX,
@@ -32,30 +32,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		IsConnected = ConnectNamedPipe(hPipe, NULL);
 		if (IsConnected) {
-			printf("Connect pipe");  
-			break;
-		}
-	}
-	while (true)
-	{
-		IsSuccess = ReadFile(   
-            hPipe,        // handle to pipe   
-            chRequest,    // buffer to receive data   
-            BUFSIZE*sizeof(TCHAR), // size of buffer   
-            &cbBytesRead, // number of bytes read   
-            NULL);        // not overlapped I/O
-		if (IsSuccess) {
-			printf("%ls", chRequest);
-			IsSuccess = WriteFile(   
-				 hPipe,                  // pipe handle   
-				lpvMessage,             // message   
-				(lstrlen(lpvMessage)+1)*sizeof(TCHAR), // message length   
-				&cbWritten,             // bytes written   
-				NULL);      
-			if (IsSuccess)
-			{
-				break;
-			}
+			printf("Connect pipe \n");  
+			hThread = CreateThread(NULL, 0, InstanceThread, (LPVOID) hPipe, 0, &dwThreadId); 
 		}
 	}
 	
@@ -64,3 +42,51 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 }
 
+DWORD WINAPI InstanceThread(LPVOID lpvParam) { 
+
+	LPTSTR lpvMessage=TEXT("Default message from Server \n"); 
+	std::wstring strMessage;
+	BOOL IsRSuccess = FALSE;
+	BOOL IsWSuccess = FALSE;
+	HANDLE hPipe = lpvParam;
+	TCHAR chRequest[BUFSIZE];
+	DWORD cbBytesRead;
+	DWORD cbWritten;
+	IsRSuccess = ReadFile(   
+            hPipe,        // handle to pipe   
+            chRequest,    // buffer to receive data   
+            BUFSIZE*sizeof(TCHAR), // size of buffer   
+            &cbBytesRead, // number of bytes read   
+            NULL);        // not overlapped I/O
+	while (true)
+	{
+		if (IsRSuccess) {
+			HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+			SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_RED);
+			printf("The Client say:\n");
+			SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | 0);
+			printf("%ls\n", chRequest);
+			SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+			printf("I say:\n");
+			SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | 0);
+			//std::wcin>> strMessage;
+			getline(std::wcin, strMessage);
+			lpvMessage = (LPTSTR)strMessage.c_str();
+			IsWSuccess = WriteFile(   
+				 hPipe,                  // pipe handle   
+				lpvMessage,             // message   
+				(lstrlen(lpvMessage)+1)*sizeof(TCHAR), // message length   
+				&cbWritten,             // bytes written   
+				NULL);      
+		}
+		if (IsWSuccess) {
+			IsRSuccess = ReadFile(   
+            hPipe,        // handle to pipe   
+            chRequest,    // buffer to receive data   
+            BUFSIZE*sizeof(TCHAR), // size of buffer   
+            &cbBytesRead, // number of bytes read   
+            NULL);        // not overlapped I/O
+		}
+	}
+	return 0;
+}

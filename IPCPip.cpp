@@ -1,6 +1,3 @@
-// IPCPip.cpp : ¥³¥ó¥½©`¥ë ¥¢¥×¥ê¥±©`¥·¥ç¥ó¤Î¥¨¥ó¥È¥ê ¥Ý¥¤¥ó¥È¤ò¶¨Áx¤·¤Þ¤¹¡£
-//
-
 #include "stdafx.h"
 #include <Windows.h>
 #define BUFSIZE 4096
